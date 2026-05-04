@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "raspi-weather-sensor"
+version = "0.1.0"
+description = "Raspberry Pi weather sensor script for temperature, humidity, and dew point."
+requires-python = ">=3.11"
+dependencies = [
+  "python-dotenv>=1.0.1",
+  "requests>=2.32.3",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
