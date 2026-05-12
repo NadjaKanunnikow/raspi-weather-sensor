@@ -1,6 +1,7 @@
 """Sensor adapters.
 
-Use MockSensor on a laptop. Use JoyPiDht11Sensor on the Joy-Pi / Raspberry Pi.
+Use MockSensor on a laptop.
+Use Dht22Sensor on the Raspberry Pi / Joy-Pi when using DHT22 or AM2302.
 """
 
 from __future__ import annotations
@@ -31,73 +32,93 @@ class MockSensor(WeatherSensor):
         )
 
 
-class JoyPiDht11Sensor(WeatherSensor):
-    """Read the built-in Joy-Pi DHT11 sensor.
+class Dht22Sensor(WeatherSensor):
+    """Read a DHT22 / AM2302 compatible sensor.
 
-    The Joy-Pi manual uses BCM GPIO 4 for the DHT11 sensor:
-
-        instance = dht11.DHT11(pin=4)
-
-    The default DHT_PIN in this project is therefore "4".
+    For GPIO4 use DHT_PIN=4 or DHT_PIN=D4 in the .env file.
     """
 
     def __init__(
         self,
-        pin: int = 4,
+        pin_name: str = "D4",
         max_retries: int = 20,
-        retry_delay_seconds: float = 0.5,
+        retry_delay_seconds: float = 2.0,
     ) -> None:
         try:
-            import RPi.GPIO as GPIO  # type: ignore
-            import dht11  # type: ignore
+            import adafruit_dht  # type: ignore
+            import board  # type: ignore
         except ImportError as exc:
             raise RuntimeError(
-                "Joy-Pi DHT11 dependencies are missing. On the Raspberry Pi install: "
+                "DHT22 dependencies are missing. Install them with: "
                 "pip install -r requirements-pi-dht.txt"
             ) from exc
 
-        GPIO.setwarnings(False)
-        GPIO.setmode(GPIO.BCM)
-        GPIO.cleanup()
+        normalized_pin_name = _normalize_board_pin(pin_name)
 
-        self._device = dht11.DHT11(pin=pin)
+        if not hasattr(board, normalized_pin_name):
+            raise ValueError(
+                f"Board pin '{normalized_pin_name}' does not exist. "
+                "For GPIO4 use DHT_PIN=4 or DHT_PIN=D4."
+            )
+
+        board_pin = getattr(board, normalized_pin_name)
+
+        self._device = adafruit_dht.DHT22(board_pin, use_pulseio=False)
         self._max_retries = max_retries
         self._retry_delay_seconds = retry_delay_seconds
+
+        time.sleep(2.0)
 
     def read(self) -> SensorReading:
         last_error = None
 
-        for _ in range(self._max_retries):
-            result = self._device.read()
+        for attempt in range(1, self._max_retries + 1):
+            try:
+                temperature = self._device.temperature
+                humidity = self._device.humidity
 
-            if result.is_valid():
-                return SensorReading(
-                    temperature_c=float(result.temperature),
-                    humidity_percent=float(result.humidity),
-                )
+                if temperature is None or humidity is None:
+                    last_error = f"empty reading on attempt {attempt}"
+                    print(f"Rejected DHT22 reading: {last_error}")
 
-            last_error = getattr(result, "error_code", None)
+                elif _is_plausible(float(temperature), float(humidity)):
+                    return SensorReading(
+                        temperature_c=float(temperature),
+                        humidity_percent=float(humidity),
+                    )
+
+                else:
+                    last_error = (
+                        f"implausible reading on attempt {attempt}: "
+                        f"temperature={temperature}, humidity={humidity}"
+                    )
+                    print(f"Rejected DHT22 reading: {last_error}")
+
+            except RuntimeError as exc:
+                last_error = str(exc)
+                print(f"Rejected DHT22 reading on attempt {attempt}: {exc}")
+
             time.sleep(self._retry_delay_seconds)
 
         raise RuntimeError(
-            f"Could not read valid DHT11 data after {self._max_retries} attempts. "
-            f"Last error code: {last_error}"
+            f"Could not read plausible DHT22 data after "
+            f"{self._max_retries} attempts. Last error: {last_error}"
         )
 
 
-def _parse_gpio_pin(value: str) -> int:
-    """Parse either "4" or legacy values like "D4" into integer BCM pin 4."""
+def _is_plausible(temperature: float, humidity: float) -> bool:
+    """Reject obviously wrong indoor readings."""
+    return 5.0 <= temperature <= 45.0 and 10.0 <= humidity <= 100.0
+
+
+def _normalize_board_pin(value: str) -> str:
+    """Convert '4' or 'D4' to board pin name 'D4'."""
     normalized = value.strip().upper()
 
     if normalized.startswith("D"):
-        normalized = normalized[1:]
+        return normalized
 
-    try:
-        return int(normalized)
-    except ValueError as exc:
-        raise ValueError(
-            f"Invalid DHT_PIN '{value}'. Use '4' for the Joy-Pi DHT11 sensor."
-        ) from exc
+    return f"D{normalized}"
 
 
 def create_sensor(sensor_type: str, dht_pin: str) -> WeatherSensor:
@@ -106,9 +127,10 @@ def create_sensor(sensor_type: str, dht_pin: str) -> WeatherSensor:
     if normalized_sensor_type == "mock":
         return MockSensor()
 
-    if normalized_sensor_type in {"joypi_dht11", "dht11"}:
-        return JoyPiDht11Sensor(pin=_parse_gpio_pin(dht_pin))
+    if normalized_sensor_type in {"dht22", "am2302"}:
+        return Dht22Sensor(pin_name=dht_pin)
 
     raise ValueError(
-        f"Unsupported SENSOR_TYPE '{sensor_type}'. Use 'mock' or 'joypi_dht11'."
+        f"Unsupported SENSOR_TYPE '{sensor_type}'. "
+        "Use 'mock', 'dht22', or 'am2302'."
     )

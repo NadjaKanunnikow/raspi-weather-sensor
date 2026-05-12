@@ -1,0 +1,7 @@
+Metadata-Version: 2.4
+Name: raspi-weather-sensor
+Version: 0.1.0
+Summary: Raspberry Pi weather sensor script for temperature, humidity, and dew point.
+Requires-Python: >=3.11
+Requires-Dist: python-dotenv>=1.0.1
+Requires-Dist: requests>=2.32.3
