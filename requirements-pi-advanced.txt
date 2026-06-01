@@ -1,0 +1,11 @@
+-r requirements-pi-dht22.txt
+
+adafruit-circuitpython-ht16k33
+adafruit-circuitpython-charlcd
+smbus2
+spidev
+
+# The Joy-Pi RFID lesson uses MFRC522-python, which provides the uppercase
+# MFRC522 module imported by taupunktMitLuefterAdvanced.py.
+# Install it on the Raspberry Pi as described in the Joy-Pi manual, for example:
+# sudo git clone --single-branch --branch python3-spi-updates https://github.com/lucassarcanjo/MFRC522-python.git

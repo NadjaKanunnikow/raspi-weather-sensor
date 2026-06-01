@@ -1,0 +1,19 @@
+[Unit]
+Description=Joy-Pi advanced dew point fan controller
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/home/pi/raspi-weather-sensor
+Environment=PYTHONUNBUFFERED=1
+Environment=PYTHONPATH=/home/pi/raspi-weather-sensor/src
+# If MFRC522.py is only cloned and not installed globally, append its folder:
+# Environment=PYTHONPATH=/home/pi/raspi-weather-sensor/src:/home/pi/Desktop/Joy-Pi/MFRC522-python
+ExecStart=/usr/bin/python3 -m weather_sensor.taupunktMitLuefterAdvanced
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
