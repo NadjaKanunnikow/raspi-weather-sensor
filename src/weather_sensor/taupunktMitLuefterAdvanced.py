@@ -10,6 +10,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime, time as datetime_time, timezone
 import math
+import sys
 import time
 from typing import Any, Optional
 
@@ -78,14 +79,15 @@ MANUAL_DEWPOINT_DIFF_MAX = 60.0
 DEWPOINT_THRESHOLD_MIN = -40.0
 DEWPOINT_THRESHOLD_MAX = 60.0
 
-MEASUREMENT_INTERVAL_SECONDS = 60
+MEASUREMENT_INTERVAL_SECONDS = 10
 CONTROL_POLL_INTERVAL_SECONDS = 5
 SENSOR_RETRY_SECONDS = 5
 SENSOR_DELAY_SECONDS = 2
 MAIN_LOOP_SLEEP_SECONDS = 0.2
 TOUCH_LONG_PRESS_SECONDS = 1.0
 TOUCH_DEBOUNCE_SECONDS = 0.05
-SEGMENT_OVERRIDE_SECONDS = 10.0
+SEGMENT_OVERRIDE_SECONDS = 5.0    # status (touch short) returns to clock after 5 s
+SEGMENT_DEW_POINT_SECONDS = 5.0   # dew-point (touch long) returns to clock after 5 s
 LCD_MESSAGE_SECONDS = 5.0
 MOTION_COOLDOWN_SECONDS = 10.0
 LIGHT_POLL_INTERVAL_SECONDS = 2.0
@@ -724,7 +726,7 @@ class SegmentClock:
         self._write_text("GOOD" if ok else "Err")
 
     def show_dew_point_difference(self, value: Optional[float]) -> None:
-        self._override_until = time.monotonic() + SEGMENT_OVERRIDE_SECONDS
+        self._override_until = time.monotonic() + SEGMENT_DEW_POINT_SECONDS
         self._last_second = None
 
         if value is None:
@@ -1026,12 +1028,11 @@ def handle_rfid_toggle(
     uid: tuple[int, int, int, int],
 ) -> None:
     if state.active:
-        state.active = False
-        state.next_measurement_at = 0.0
-        state.next_control_poll_at = 0.0
+        # Second tap: shut down completely.
+        # GPIO cleanup and clock.clear() run in the finally block of main().
         set_fan(GPIO, state, False)
-        print(f"RFID UID {format_uid(uid)}: controller stopped; fan OFF.")
-        return
+        print(f"RFID UID {format_uid(uid)}: controller stopped; fan OFF. Shutting down.")
+        sys.exit(0)
 
     state.active = True
     now = time.monotonic()

@@ -1,0 +1,52 @@
+# Taupunkt Fan Controller — systemd service
+#
+# Installation (run on the Raspberry Pi):
+#
+#   1. Copy this file to systemd:
+#        sudo cp taupunkt.service /etc/systemd/system/
+#
+#   2. Reload systemd and enable autostart:
+#        sudo systemctl daemon-reload
+#        sudo systemctl enable taupunkt.service
+#
+#   3. Start it now (or just reboot):
+#        sudo systemctl start taupunkt.service
+#
+#   Useful commands:
+#        sudo systemctl status taupunkt      # check if running
+#        sudo journalctl -u taupunkt -f      # live log output
+#        sudo systemctl stop taupunkt        # stop manually
+#        sudo systemctl disable taupunkt     # remove autostart
+#
+# After the service starts the script waits in standby.
+# Touch the RFID transponder once  → measurements begin.
+# Touch the RFID transponder again → script exits completely.
+#   To restart: sudo systemctl start taupunkt
+#   Or reboot the Pi (autostart runs the script again automatically).
+#
+# ─── Adjust the paths below to match your Pi setup ───────────────────────────
+
+[Unit]
+Description=Taupunkt Dew-Point Fan Controller
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=pi
+
+# Path to the Python script — adjust if your project is in a different location
+ExecStart=/usr/bin/python3 /home/pi/raspi-python/raspi-weather-sensor/src/weather_sensor/taupunktMitLuefterAdvanced.py
+
+# Working directory (must contain the src/ folder for relative imports)
+WorkingDirectory=/home/pi/raspi-python/raspi-weather-sensor
+
+# Do NOT restart automatically — the script exits intentionally on second RFID tap.
+# To restart: sudo systemctl start taupunkt  OR  reboot the Pi.
+Restart=no
+
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
