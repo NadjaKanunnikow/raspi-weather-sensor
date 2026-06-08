@@ -21,23 +21,14 @@ from typing import Any, Optional
 
 # TODO: Insert the new backend endpoint here when the new site/API/database are
 # ready again.  The old Render URL and API key are intentionally not used here.
-MEASUREMENTS_API_URL = ""
+MEASUREMENTS_API_URL = "https://taupunkt-dashboard.onrender.com/api/measurements"
 
-# TODO: Insert the new backend control endpoint here.  The Raspberry Pi expects
-# JSON like:
-# {"mode": "automatic"}
-# {"mode": "manual", "manualDewPointDifferenceC": 5.0}
-# {"displayTime": "08:30"}
-# {"usePiTime": true}
-# {"dewPointDiffOn": 5.0}
-CONTROL_API_URL = ""
+CONTROL_API_URL = "https://taupunkt-dashboard.onrender.com/api/control"
 
-# TODO: Insert a status/health endpoint for the website/backend.  Touching the
-# touch sensor will show GOOD on the 7-segment display if this endpoint answers.
-STATUS_API_URL = ""
+STATUS_API_URL = "https://taupunkt-dashboard.onrender.com/api/status/health"
 
-# TODO: Insert the new API key here if the new backend still needs one.
-API_KEY = ""
+# APP_API_KEY from Render → Dashboard → taupunkt-dashboard → Environment
+API_KEY = "uPjeeFqBfG/9V5ddXLzZ2pCCATf2Bc9JpbPvrO5t7hs="
 
 
 # ============================================================
