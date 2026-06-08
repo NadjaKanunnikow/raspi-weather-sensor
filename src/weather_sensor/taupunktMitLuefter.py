@@ -18,9 +18,9 @@ import RPi.GPIO as GPIO
 
 # ============================================================
  
-API_BASE_URL = "https://raspi-dashboard-nadja-daria.onrender.com"
+API_BASE_URL = "https://taupunkt-dashboard.onrender.com"
 
-API_KEY = "f481bdb9ee46e6db4ddd24fa489f11a8"
+API_KEY = "uPjeeFqBfG/9V5ddXLzZ2pCCATf2Bc9JpbPvrO5t7hs="
  
 MEASUREMENTS_API_URL = f"{API_BASE_URL}/api/measurements"
  
