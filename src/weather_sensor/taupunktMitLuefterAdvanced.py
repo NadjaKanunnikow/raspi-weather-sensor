@@ -39,17 +39,16 @@ API_KEY = "uPjeeFqBfG/9V5ddXLzZ2pCCATf2Bc9JpbPvrO5t7hs="
 INSIDE_PIN_NAME = "D4"
 OUTSIDE_PIN_NAME = "D26"
 
-# RPi.GPIO is used in BOARD mode in this file because the Joy-Pi instructions
-# list the relay as physical board pin 40.
-# Old FAN_PIN=21 in BCM mode is the same physical pin as BOARD pin 40.
-FAN_PIN_BOARD = 40
+# RPi.GPIO BCM mode — same physical pins as before, BCM numbering avoids
+# conflicts with MFRC522 and adafruit_blinka which also use BCM mode.
+# BOARD 40 = BCM 21, BOARD 11 = BCM 17, BOARD 16 = BCM 23
+FAN_PIN_BCM = 21
 
-# Joy-Pi module 19, physical board pin 11.  Works with all DIP switches OFF.
-TOUCH_PIN_BOARD = 11
+# Joy-Pi module 19, physical board pin 11 = BCM 17.
+TOUCH_PIN_BCM = 17
 
-# Joy-Pi module 12, physical board pin 16.  It is a digital motion detector:
-# HIGH means movement was detected, LOW means no movement.
-MOTION_PIN_BOARD = 16
+# Joy-Pi module 12, physical board pin 16 = BCM 23.
+MOTION_PIN_BCM = 23
 
 # Joy-Pi BH1750 light sensor.  The Joy-Pi manual uses I2C address 0x5c.
 LIGHT_SENSOR_ADDRESS = 0x5C
@@ -155,7 +154,7 @@ def control_dew_point_difference(
 
 def set_fan(GPIO, state: ControllerState, fan_on: bool) -> None:
     state.fan_on = fan_on
-    GPIO.output(FAN_PIN_BOARD, GPIO.LOW if fan_on else GPIO.HIGH)
+    GPIO.output(FAN_PIN_BCM, GPIO.LOW if fan_on else GPIO.HIGH)
 
 
 def apply_fan_logic(
@@ -804,7 +803,7 @@ class TouchSensor:
 
     def poll(self) -> Optional[TouchEvent]:
         now = time.monotonic()
-        raw_pressed = self._GPIO.input(TOUCH_PIN_BOARD) == self._GPIO.LOW
+        raw_pressed = self._GPIO.input(TOUCH_PIN_BCM) == self._GPIO.LOW
 
         if raw_pressed != self._last_raw_pressed:
             self._last_raw_pressed = raw_pressed
@@ -939,7 +938,7 @@ class MotionSensor:
         self._last_motion = False
 
     def poll_motion_started(self) -> bool:
-        motion = self._GPIO.input(MOTION_PIN_BOARD) == self._GPIO.HIGH
+        motion = self._GPIO.input(MOTION_PIN_BCM) == self._GPIO.HIGH
         started = motion and not self._last_motion
         self._last_motion = motion
         return started
@@ -1051,12 +1050,12 @@ def main() -> None:
 
         GPIO.setwarnings(False)
         GPIO.cleanup()
-        GPIO.setmode(GPIO.BOARD)
+        GPIO.setmode(GPIO.BCM)
 
-        GPIO.setup(FAN_PIN_BOARD, GPIO.OUT)
-        GPIO.output(FAN_PIN_BOARD, GPIO.HIGH)
-        GPIO.setup(TOUCH_PIN_BOARD, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-        GPIO.setup(MOTION_PIN_BOARD, GPIO.IN)
+        GPIO.setup(FAN_PIN_BCM, GPIO.OUT)
+        GPIO.output(FAN_PIN_BCM, GPIO.HIGH)
+        GPIO.setup(TOUCH_PIN_BCM, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+        GPIO.setup(MOTION_PIN_BCM, GPIO.IN)
         rfid_reader = RfidReader()
         rfid_debouncer = RfidToggleDebouncer()
         touch_sensor = TouchSensor(GPIO)
@@ -1106,7 +1105,7 @@ def main() -> None:
     finally:
         if GPIO is not None:
             try:
-                GPIO.output(FAN_PIN_BOARD, GPIO.HIGH)
+                GPIO.output(FAN_PIN_BCM, GPIO.HIGH)
                 GPIO.cleanup()
             except Exception:
                 pass
