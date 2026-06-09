@@ -856,7 +856,7 @@ class LcdDisplay:
             import busio
 
             i2c = busio.I2C(board.SCL, board.SDA)
-            self._lcd = character_lcd.Character_LCD_I2C(i2c, 16, 2)
+            self._lcd = character_lcd.Character_LCD_I2C(i2c, 16, 2, address=0x21)
             self._lcd.clear()
             self._lcd.backlight = False
         except Exception as error:
