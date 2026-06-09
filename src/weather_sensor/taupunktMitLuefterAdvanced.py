@@ -590,7 +590,10 @@ def setup_dht_sensors():
     inside_pin = getattr(board, INSIDE_PIN_NAME)
     outside_pin = getattr(board, OUTSIDE_PIN_NAME)
 
-    return adafruit_dht.DHT22(inside_pin), adafruit_dht.DHT22(outside_pin)
+    return (
+        adafruit_dht.DHT22(inside_pin, use_pulseio=False),
+        adafruit_dht.DHT22(outside_pin, use_pulseio=False),
+    )
 
 
 def read_snapshot(dht_inside, dht_outside) -> Optional[SensorSnapshot]:
@@ -688,13 +691,16 @@ class SegmentClock:
         if self._segment is None:
             return
 
-        self._segment.fill(0)
-        self._segment[0] = str(now.hour // 10)
-        self._segment[1] = str(now.hour % 10)
-        self._segment[2] = str(now.minute // 10)
-        self._segment[3] = str(now.minute % 10)
-        self._segment.colon = now.second % 2 == 0
-        self._segment.show()
+        try:
+            self._segment.fill(0)
+            self._segment[0] = str(now.hour // 10)
+            self._segment[1] = str(now.hour % 10)
+            self._segment[2] = str(now.minute // 10)
+            self._segment[3] = str(now.minute % 10)
+            self._segment.colon = now.second % 2 == 0
+            self._segment.show()
+        except Exception:
+            pass
 
     def update(self, state: ControllerState) -> None:
         if self._segment is None:
@@ -709,6 +715,12 @@ class SegmentClock:
 
         self._last_second = now.second
         self._write_time(now)
+
+    def show_activated(self) -> None:
+        """Brief 'on' flash when RFID activates the controller."""
+        self._override_until = time.monotonic() + 2.0
+        self._last_second = None
+        self._write_text(" on ")
 
     def show_status(self, ok: bool) -> None:
         self._override_until = time.monotonic() + SEGMENT_OVERRIDE_SECONDS
@@ -1016,6 +1028,7 @@ def handle_rfid_toggle(
     GPIO,
     state: ControllerState,
     uid: tuple[int, int, int, int],
+    clock: "SegmentClock",
 ) -> None:
     if state.active:
         # Second tap: shut down completely.
@@ -1028,9 +1041,10 @@ def handle_rfid_toggle(
     now = time.monotonic()
     state.next_control_poll_at = now
     state.next_measurement_at = now + MEASUREMENT_INTERVAL_SECONDS
+    clock.show_activated()   # " on " for 2 s so user knows transponder was read
     print(
         f"RFID UID {format_uid(uid)}: controller started; "
-        "first measurement in 60 seconds."
+        f"first measurement in {MEASUREMENT_INTERVAL_SECONDS} seconds."
     )
 
 
@@ -1079,7 +1093,7 @@ def main() -> None:
 
             uid = rfid_debouncer.poll(rfid_reader)
             if uid is not None:
-                handle_rfid_toggle(GPIO, state, uid)
+                handle_rfid_toggle(GPIO, state, uid, clock)
 
             now = time.monotonic()
 
