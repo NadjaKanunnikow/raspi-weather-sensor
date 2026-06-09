@@ -1044,6 +1044,11 @@ def main() -> None:
     try:
         import RPi.GPIO as GPIO
 
+        # setup_dht_sensors() imports adafruit_blinka (board) which calls
+        # GPIO.setmode(GPIO.BCM) internally. We must do it first, then
+        # clean up and switch to BOARD mode for our relay/touch/motion pins.
+        dht_inside, dht_outside = setup_dht_sensors()
+
         GPIO.setwarnings(False)
         GPIO.cleanup()
         GPIO.setmode(GPIO.BOARD)
@@ -1052,8 +1057,6 @@ def main() -> None:
         GPIO.output(FAN_PIN_BOARD, GPIO.HIGH)
         GPIO.setup(TOUCH_PIN_BOARD, GPIO.IN, pull_up_down=GPIO.PUD_UP)
         GPIO.setup(MOTION_PIN_BOARD, GPIO.IN)
-
-        dht_inside, dht_outside = setup_dht_sensors()
         rfid_reader = RfidReader()
         rfid_debouncer = RfidToggleDebouncer()
         touch_sensor = TouchSensor(GPIO)
